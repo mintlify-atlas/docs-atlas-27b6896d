@@ -1,0 +1,57 @@
+---
+title: "Hermes Labyrinth plugin API: all endpoints"
+description: "Read-only FastAPI routes exposed by Hermes Labyrinth under /api/plugins/hermes-labyrinth/. All 9 endpoints use GET with no authentication required."
+keywords: ["hermes labyrinth", "plugin api", "api reference", "fastapi", "read-only"]
+---
+
+The Hermes Labyrinth plugin exposes a read-only FastAPI router mounted at `/api/plugins/hermes-labyrinth/` by the Hermes dashboard plugin system. Every endpoint uses `GET` — the API never starts, stops, mutates, or creates Hermes sessions. Because the plugin runs locally on the same machine as the Hermes dashboard, no authentication is required.
+
+**Base URL**
+
+```
+http://127.0.0.1:9119/api/plugins/hermes-labyrinth
+```
+
+## Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Plugin health check and data source availability |
+| `GET` | `/journeys` | List recent journeys with pagination |
+| `GET` | `/journeys/{journey_id}` | Journey detail with guideposts and crossing count |
+| `GET` | `/journeys/{journey_id}/crossings` | All crossings and threads for a journey |
+| `GET` | `/skills` | Skill inventory across all source directories |
+| `GET` | `/cron` | Scheduled job inventory with state and last run |
+| `GET` | `/guideposts` | Recent automated observations across journeys |
+| `GET` | `/reports/{journey_id}.json` | Full journey export as JSON |
+| `GET` | `/reports/{journey_id}.md` | Full journey export as Markdown |
+
+<Note>
+  All responses include a `generated_at` field containing a Unix timestamp (float) recording when the response was assembled.
+</Note>
+
+## Endpoint pages
+
+<CardGroup cols={2}>
+  <Card title="Health" icon="heart-pulse" href="/api/health">
+    Plugin liveness check and data source status.
+  </Card>
+  <Card title="Journeys" icon="map" href="/api/journeys">
+    List and retrieve agent sessions as journeys.
+  </Card>
+  <Card title="Crossings" icon="arrows-split-up-and-left" href="/api/crossings">
+    Boundary events and thread groupings for a journey.
+  </Card>
+  <Card title="Skills" icon="book-open" href="/api/skills">
+    Bundled, optional, external, and user skill inventory.
+  </Card>
+  <Card title="Cron" icon="clock" href="/api/cron">
+    Scheduled job definitions, state, and last run results.
+  </Card>
+  <Card title="Guideposts" icon="signs-post" href="/api/guideposts">
+    Recent automated observations derived from local evidence.
+  </Card>
+  <Card title="Reports" icon="file-export" href="/api/reports">
+    Export a journey as redacted JSON or Markdown.
+  </Card>
+</CardGroup>

@@ -1,0 +1,100 @@
+{
+  "projectType": "saas",
+  "projectName": "Hermes Labyrinth",
+  "projectDescription": "A read-only observability dashboard plugin for Hermes Agent that maps autonomous sessions as journeys through crossings, tools, skills, cron jobs, and model transitions.",
+  "theme": "luma",
+  "primaryColor": "#4a6fa5",
+  "lightColor": "#ece7d6",
+  "darkColor": "#0e0d0a",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "demo"
+            ]
+          },
+          {
+            "group": "Core Views",
+            "pages": [
+              "views/journey-index",
+              "views/labyrinth-map",
+              "views/crossing-inspector",
+              "views/skill-atlas",
+              "views/cron-gate",
+              "views/model-ferry"
+            ]
+          },
+          {
+            "group": "Reports & Guideposts",
+            "pages": [
+              "reports",
+              "guideposts"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/configuration",
+              "reference/data-policy",
+              "reference/architecture",
+              "reference/known-limitations",
+              "reference/roadmap"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/health",
+              "api/journeys",
+              "api/crossings",
+              "api/skills",
+              "api/cron",
+              "api/guideposts",
+              "api/reports"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Journey index showing recent CLI, dashboard, gateway, cron, and delegated agent sessions",
+    "Labyrinth map of ordered crossings through a selected journey with thread, corridor, and flight-strip modes",
+    "Crossing inspector with input/output previews, status, duration, and evidence refs",
+    "Skill atlas inventorying bundled, optional, external, and user skills with enabled/disabled state",
+    "Cron gate showing scheduled jobs, next runs, last failures, and project workdirs",
+    "Model ferry tracking model/provider transitions and context compression events across sessions",
+    "Guidepost engine generating automated observations backed by local evidence",
+    "Exportable redacted Markdown and JSON reports for any journey",
+    "Fully read-only — never mutates Hermes state",
+    "Graceful degradation on fresh Hermes installs with sparse data"
+  ],
+  "publicApiSurface": [
+    "GET /api/plugins/hermes-labyrinth/health",
+    "GET /api/plugins/hermes-labyrinth/journeys",
+    "GET /api/plugins/hermes-labyrinth/journeys/{journey_id}",
+    "GET /api/plugins/hermes-labyrinth/journeys/{journey_id}/crossings",
+    "GET /api/plugins/hermes-labyrinth/skills",
+    "GET /api/plugins/hermes-labyrinth/cron",
+    "GET /api/plugins/hermes-labyrinth/guideposts",
+    "GET /api/plugins/hermes-labyrinth/reports/{journey_id}.json",
+    "GET /api/plugins/hermes-labyrinth/reports/{journey_id}.md"
+  ]
+}

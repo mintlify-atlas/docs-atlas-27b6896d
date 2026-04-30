@@ -1,0 +1,201 @@
+---
+title: "GET /crossings — all boundary events for a journey"
+description: "Returns all crossing events and thread groupings for a journey, derived from the session's messages in the local Hermes state database."
+keywords: ["crossings", "events", "threads", "tool calls", "hermes labyrinth api"]
+---
+
+The crossings endpoint returns every boundary event recorded for a journey, normalized from the session's message history. Each message may produce one or more crossings depending on its role and content. Crossings are also grouped into threads for navigational purposes.
+
+## Endpoint
+
+```
+GET /api/plugins/hermes-labyrinth/journeys/{journey_id}/crossings
+```
+
+Returns 404 if `state.db` does not exist or the journey is not found.
+
+## Path parameters
+
+<ParamField path="journey_id" type="string" required>
+  The journey ID to retrieve crossings for. Accepts a full session ID or any resolvable alias.
+</ParamField>
+
+## Response fields
+
+<ResponseField name="journey_id" type="string" required>
+  The resolved session ID for this journey.
+</ResponseField>
+
+<ResponseField name="crossings" type="Crossing[]" required>
+  Ordered list of crossing objects derived from the session's messages. See [Crossing object](#crossing-object) below.
+</ResponseField>
+
+<ResponseField name="threads" type="Thread[]" required>
+  Groupings of crossing IDs into named passages. See [Thread object](#thread-object) below.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Crossing object
+
+<ResponseField name="crossing_id" type="string">
+  Unique identifier for this crossing within the journey.
+</ResponseField>
+
+<ResponseField name="journey_id" type="string">
+  The session ID this crossing belongs to.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  The crossing type. Possible values:
+
+  - `prompt` — a user message entering the agent loop.
+  - `tool_call` — the agent invoking a tool.
+  - `tool_result` — a tool returning its result to the agent.
+  - `assistant_response` — text output from the model.
+  - `context_compression` — a context compression event at session end.
+  - `subagent_spawn` — the agent delegating to a subagent (via `delegate_task`).
+  - `subagent_return` — a delegated subagent returning its result.
+  - `approval` — an approval request or gate encountered by the agent.
+  - `{role}_message` — a message with an unrecognized role (e.g. `system_message`).
+</ResponseField>
+
+<ResponseField name="label" type="string">
+  Human-readable label for display. For tool crossings this is the tool name; for others it describes the crossing type.
+</ResponseField>
+
+<ResponseField name="started_at" type="float | null">
+  Unix timestamp when this crossing began.
+</ResponseField>
+
+<ResponseField name="ended_at" type="float | null">
+  Unix timestamp when this crossing ended.
+</ResponseField>
+
+<ResponseField name="duration_ms" type="number | null">
+  Duration in milliseconds. `null` when timing data is not available.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Outcome of this crossing. One of `complete`, `failed`, or `interrupted`. Derived from message content and finish reason.
+</ResponseField>
+
+<ResponseField name="actor" type="string">
+  The entity that initiated this crossing (e.g. `user`, `agent`, a tool name, or the message role).
+</ResponseField>
+
+<ResponseField name="target" type="string">
+  The entity this crossing was directed at (e.g. `agent_loop`, `user`, a tool name, `session`, or `next_context`).
+</ResponseField>
+
+<ResponseField name="inputs_preview" type="string">
+  Redacted, whitespace-normalized preview of inputs (max 360 characters). Empty string when not applicable.
+</ResponseField>
+
+<ResponseField name="outputs_preview" type="string">
+  Redacted, whitespace-normalized preview of outputs (max 360 characters). Empty string when not applicable.
+</ResponseField>
+
+<ResponseField name="evidence_refs" type="object[]">
+  References to the source data backing this crossing.
+
+  <Expandable title="properties">
+    <ResponseField name="kind" type="string">
+      Reference kind: `"message"`, `"session"`, `"crossing"`, or `"tool"`.
+    </ResponseField>
+    <ResponseField name="id" type="string | null">
+      The message or session ID this crossing was derived from.
+    </ResponseField>
+    <ResponseField name="field" type="string">
+      The specific field referenced (present for session-level evidence).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## Thread object
+
+Threads group crossing IDs into named passages to support navigation within the Labyrinth Map.
+
+<ResponseField name="thread_id" type="string">
+  Thread identifier. One of `main`, `tools`, `delegation`, or `thresholds`.
+</ResponseField>
+
+<ResponseField name="label" type="string">
+  Display label for this thread:
+
+  - `main` → `"Main passage"` — prompts, assistant responses, and other role messages.
+  - `tools` → `"Tool passage"` — tool calls and tool results.
+  - `delegation` → `"Delegation passage"` — subagent spawns and returns.
+  - `thresholds` → `"Threshold passage"` — approvals and context compressions.
+</ResponseField>
+
+<ResponseField name="crossing_ids" type="string[]">
+  Ordered list of crossing IDs belonging to this thread.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/journeys/sess_abc123/crossings"
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "journey_id": "sess_abc123",
+  "crossings": [
+    {
+      "crossing_id": "m101-user",
+      "journey_id": "sess_abc123",
+      "type": "prompt",
+      "label": "User prompt",
+      "started_at": 1717990000.0,
+      "ended_at": 1717990000.0,
+      "duration_ms": null,
+      "status": "complete",
+      "actor": "user",
+      "target": "agent_loop",
+      "inputs_preview": "Refactor the auth module to use JWT.",
+      "outputs_preview": "",
+      "evidence_refs": [{"kind": "message", "id": "101"}]
+    },
+    {
+      "crossing_id": "m102-tool-call-0",
+      "journey_id": "sess_abc123",
+      "type": "tool_call",
+      "label": "read_file",
+      "started_at": 1717990010.0,
+      "ended_at": 1717990010.0,
+      "duration_ms": null,
+      "status": "complete",
+      "actor": "agent",
+      "target": "read_file",
+      "inputs_preview": "{\"path\": \"src/auth.py\"}",
+      "outputs_preview": "",
+      "evidence_refs": [{"kind": "message", "id": "102"}]
+    }
+  ],
+  "threads": [
+    {
+      "thread_id": "main",
+      "label": "Main passage",
+      "crossing_ids": ["m101-user", "m103-assistant"]
+    },
+    {
+      "thread_id": "tools",
+      "label": "Tool passage",
+      "crossing_ids": ["m102-tool-call-0", "m104-tool-result"]
+    }
+  ],
+  "generated_at": 1718000000.123
+}
+```

@@ -1,0 +1,86 @@
+---
+title: "How Hermes Labyrinth reads and surfaces agent data"
+description: "Architecture of Hermes Labyrinth: how local Hermes state flows through plugin_api.py to the dashboard frontend, data sources, and the repository layout."
+keywords: ["architecture", "plugin api", "hermes labyrinth", "dashboard plugin", "data flow", "repository layout"]
+---
+
+Hermes Labyrinth is a standard Hermes dashboard plugin. It reads local Hermes state through a Python backend, exposes a set of read-only HTTP routes, and serves a pre-built JavaScript frontend bundle that renders the Labyrinth tab in the Hermes dashboard. No changes to the Hermes dashboard source are required to install or run it.
+
+## Architecture flow
+
+Data moves in one direction: from local Hermes state on disk, through the plugin backend, through the plugin API routes, and into the frontend bundle that runs in your browser.
+
+```text
+Hermes local state
+  ├─ state.db sessions/messages
+  ├─ skills directories
+  └─ cron config
+        ↓
+dashboard/plugin_api.py
+        ↓
+/api/plugins/hermes-labyrinth/*
+        ↓
+src/parts/*.js + labyrinth.css
+        ↓ npm run build
+dashboard/dist/*
+        ↓
+Hermes dashboard tab: Labyrinth
+```
+
+Each layer in the flow is responsible for a distinct transformation:
+
+- **`plugin_api.py`** reads from `state.db`, skills directories, and cron config; normalizes sessions into journeys and crossings; applies secret redaction; and serializes the result as JSON over HTTP.
+- **`/api/plugins/hermes-labyrinth/*`** is the HTTP surface exposed by Hermes after it mounts the plugin backend. All routes are `GET`-only.
+- **`dashboard/dist/`** is the pre-built static bundle loaded by the Hermes dashboard when the Labyrinth tab is active. It fetches data from the plugin API routes and renders the Journey Index, Labyrinth Map, Crossing Inspector, and all other views.
+
+## Data sources
+
+The plugin reads from the following sources, in priority order:
+
+| Priority | Source | What it provides |
+|---|---|---|
+| 1 | Hermes dashboard and session APIs | Live journey and session metadata when available |
+| 2 | Hermes session storage (`state.db`) | Sessions, messages, tool calls, tool results, and timing data — read-only |
+| 3 | Logs | Supplementary timing and error signals where session records are incomplete |
+| 4 | Skill directories (bundled, optional, user) | Skill inventory surfaced in the Skill Atlas view |
+| 5 | Cron config | Scheduled job definitions, next runs, last failures, and working directories |
+
+The plugin never writes to any of these sources.
+
+## Repository layout
+
+```text
+.
+├── dashboard/
+│   ├── manifest.json        # Hermes dashboard plugin manifest
+│   ├── plugin_api.py        # Read-only API over local Hermes state
+│   └── dist/                # Generated dashboard plugin bundle (checked in)
+├── src/
+│   ├── parts/               # Ordered frontend source chunks
+│   ├── demo/                # GitHub Pages demo source
+│   └── labyrinth.css        # Frontend CSS source
+├── theme/
+│   └── hermes-labyrinth.yaml  # Optional Hermes dashboard theme scaffold
+├── scripts/
+│   ├── build-plugin.mjs     # Builds dashboard/dist and index.html from src
+│   ├── smoke-demo.mjs       # Browser smoke test for the public demo
+│   ├── test-plugin-api.py   # Fixture tests for API normalization helpers
+│   └── verify.mjs           # Local verification checks
+├── docs/
+│   ├── CONCEPT.md
+│   ├── DESIGN_BRIEF.md
+│   └── FUNCTIONAL_SPEC.md
+├── index.html               # Generated GitHub Pages demo (checked in)
+└── package.json             # Build, check, and smoke scripts
+```
+
+**Key directories:**
+
+- `dashboard/` contains the three files the Hermes plugin loader needs: the manifest, the Python backend, and the `dist/` bundle. This is the only directory Hermes reads at runtime.
+- `src/` contains the source files for the frontend bundle and the GitHub Pages demo. You only need these if you are modifying the frontend.
+- `theme/` contains the optional dashboard theme file. See [Configure Hermes Labyrinth](/reference/configuration) for details.
+- `scripts/` contains the build, verification, and smoke test tooling used during development and CI.
+
+<Note>
+  `dashboard/dist/` is checked in as the installable bundle. You do not need to run `npm run build` or any other build command to install the plugin — clone the repository and the bundle is ready to serve.
+</Note>

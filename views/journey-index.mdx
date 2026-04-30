@@ -1,0 +1,95 @@
+---
+title: "Journey Index: browse all Hermes sessions and runs"
+description: "Browse every Hermes session, cron run, gateway interaction, and delegated child journey. Filter by source or text to find the session you want to inspect."
+keywords: ["journey index", "sessions", "hermes labyrinth", "agent sessions", "cron", "gateway", "subagent", "filter"]
+---
+
+The Journey Index is your starting point in Hermes Labyrinth. It lists every journey Hermes has recorded — from interactive CLI and dashboard sessions to gateway-triggered runs, cron-scheduled jobs, and delegated child sessions started by a parent agent. Each row shows enough context to decide which journey to open without leaving the list.
+
+## What the Journey Index shows
+
+Every journey in the list represents a unit of agent activity drawn from the `GET /api/plugins/hermes-labyrinth/journeys` endpoint. The backend normalizes Hermes session records from `state.db` into a consistent shape regardless of origin.
+
+### Journey fields
+
+<AccordionGroup>
+  <Accordion title="Identity and origin">
+    | Field | Description |
+    |---|---|
+    | `journey_id` | Unique identifier for the journey, derived from the Hermes session ID. |
+    | `source` | Where the journey originated: `cli`, `dashboard`, `gateway`, `cron`, or `subagent`. |
+    | `parent_journey_id` | Set when this is a delegated child session. Links back to the parent journey. |
+  </Accordion>
+
+  <Accordion title="Status and timing">
+    | Field | Description |
+    |---|---|
+    | `status` | Current state: `active`, `complete`, `interrupted`, `failed`, or `unknown`. |
+    | `started_at` | Unix timestamp when the session began. |
+    | `ended_at` | Unix timestamp when the session ended, or `null` for active sessions. |
+    | `duration_ms` | Elapsed time in milliseconds. Absent if timing data is not available. |
+  </Accordion>
+
+  <Accordion title="Content and model">
+    | Field | Description |
+    |---|---|
+    | `summary` | Title or preview text extracted from the session record. |
+    | `root_prompt` | The first user message or prompt that initiated the journey. |
+    | `model_sequence` | Ordered list of models used during the session. May contain one entry or multiple after switches. |
+    | `message_count` | Total messages in the session. |
+    | `tool_call_count` | Number of tool calls the agent made. |
+    | `estimated_cost` | Cost estimate in USD when the model provider returned token billing data. |
+  </Accordion>
+</AccordionGroup>
+
+## Filtering journeys
+
+Two controls narrow the list without reloading data from the backend.
+
+**Text search** matches against the journey title, summary, and root prompt. Type any part of a prompt, model name, or summary phrase to filter in real time.
+
+**Source filter** restricts the list to one origin type. The available values match the `source` field:
+
+| Value | What it shows |
+|---|---|
+| `all` | Every journey regardless of origin (default). |
+| `cli` | Sessions started from the Hermes CLI. |
+| `dashboard` | Sessions started from the Hermes dashboard chat interface. |
+| `gateway` | Sessions triggered by an incoming gateway platform message. |
+| `cron` | Sessions launched by a scheduled cron job. |
+| `subagent` | Delegated child sessions spawned by a parent agent. |
+
+## Parent and child journeys
+
+When a journey has a non-null `parent_journey_id`, it was created by another agent session rather than directly by a user. This delegation relationship links subagent work back to the session that initiated it.
+
+<Note>
+  Both the parent and child journeys appear in the Journey Index as separate rows. Select the child journey and open it in the Labyrinth Map to see its own crossing timeline. The `parent_journey_id` field links back to the initiating session.
+</Note>
+
+The parent journey's crossing timeline will include a `subagent_spawn` crossing at the point where delegation occurred, and a `subagent_return` crossing when the child completed or timed out.
+
+## Sources explained
+
+<CardGroup cols={2}>
+  <Card title="cli and dashboard" icon="terminal">
+    Interactive sessions where a human typed prompts. Most journeys on a developer machine fall into one of these two categories.
+  </Card>
+  <Card title="gateway" icon="webhook">
+    Sessions triggered by an inbound message from a connected platform (such as Slack or a webhook). The gateway origin is detectable from the session source field.
+  </Card>
+  <Card title="cron" icon="clock">
+    Sessions launched automatically by a configured cron job. Each cron run becomes its own journey. Open the **Cron Gate** view for schedule and history details.
+  </Card>
+  <Card title="subagent" icon="git-branch">
+    Child sessions delegated by a parent agent using the `delegate_task` tool. These appear as separate journeys with a `parent_journey_id` set.
+  </Card>
+</CardGroup>
+
+## Notes on sparse data
+
+<Tip>
+  On a fresh Hermes install with few or no completed sessions, the Journey Index will show an empty or very short list. Run a few Hermes sessions, wait for them to complete, and reload the Labyrinth tab to populate the view.
+</Tip>
+
+Some fields — `duration_ms`, `model_sequence`, `tool_call_count`, and `estimated_cost` — depend on what Hermes recorded in `state.db`. Sessions that ended abnormally or that predate a field addition may show `unknown` or zero for these values. Missing data is displayed as-is rather than estimated.

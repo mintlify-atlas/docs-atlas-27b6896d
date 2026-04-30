@@ -1,0 +1,66 @@
+---
+title: "Hermes Labyrinth data policy and secret redaction"
+description: "How Hermes Labyrinth handles your data: read-only guarantees, secret redaction via agent.redact, preview truncation, unknown fields, and report generation."
+keywords: ["data policy", "secret redaction", "read-only", "privacy", "previews", "reports", "hermes labyrinth"]
+---
+
+Hermes Labyrinth is a read-only observer. It reads local Hermes state to build the Labyrinth Map, infer crossings, and generate reports, but it never writes to that state or takes any action on a running agent. This page describes the specific guarantees the plugin makes about data handling, how secret redaction works, how previews are truncated, and what happens when fields are missing.
+
+<Note>
+  Hermes Labyrinth never starts, stops, resumes, mutates, or creates Hermes sessions. It is safe to run alongside any active agent work.
+</Note>
+
+## Read-only guarantee
+
+The plugin API (`plugin_api.py`) exposes only `GET` endpoints. There are no write, update, or delete routes. Specifically, Hermes Labyrinth:
+
+- Does not start, stop, or resume Hermes sessions.
+- Does not mutate session messages, tool results, or any record in `state.db`.
+- Does not create new sessions, journeys, cron jobs, or skill entries.
+- Does not send any data to external services.
+
+All data flows are inbound: local Hermes state → plugin API → dashboard frontend.
+
+## Secret redaction
+
+Before any crossing preview or report is returned to the frontend, the plugin passes text content through Hermes's built-in redaction layer: `agent.redact.redact_sensitive_text`.
+
+This function applies pattern-based redaction to detect and mask strings that match known sensitive patterns — API keys, tokens, high-entropy secrets, and similar values. Matched content is replaced with a masked placeholder before it appears in any preview or export.
+
+Redaction applies to:
+
+- `inputs_preview` and `outputs_preview` fields on every crossing.
+- The journey summary excerpt shown in the Journey Index.
+- All preview text included in Markdown and JSON report exports.
+
+<Warning>
+  Redaction is best-effort and pattern-based. If a secret does not match a known pattern, it may appear in a preview or report. Do not treat Labyrinth outputs as a secure audit log or share them in untrusted channels without reviewing the content first.
+</Warning>
+
+## Preview truncation
+
+Input and output previews are truncated to **360 characters** (the `PREVIEW_LIMIT` constant in the plugin API). This applies uniformly to all crossing previews across the Journey Index, Labyrinth Map, Crossing Inspector, and report exports.
+
+The truncation limit exists to keep API response sizes predictable and to avoid surfacing large volumes of potentially sensitive raw content in the dashboard UI.
+
+## Unknown fields
+
+When a field is absent from the underlying Hermes session record — for example, when a model was not recorded, a duration was not available, or a tool timing was not captured — Hermes Labyrinth shows the field as `unknown`. It does not estimate, interpolate, or fabricate missing values.
+
+This applies throughout the plugin:
+
+- Crossing type, status, duration, and actor fields fall back to `unknown` when the underlying data is absent.
+- Journey model sequences show `unknown` when no model was recorded.
+- Guidepost evidence references only point to data that exists in local state.
+
+## Reports
+
+Markdown (`.md`) and JSON (`.json`) reports are generated on demand from local Hermes state when you request a journey report. The generation happens server-side in `plugin_api.py`. Redaction is applied to all preview fields before the report is returned — the same `agent.redact.redact_sensitive_text` pass used for live dashboard previews runs again at report generation time.
+
+Reports are not persisted by the plugin. Each request regenerates the report from the current local state snapshot.
+
+See [Export journey reports](/reports) for the full report format reference.
+
+## Public demo
+
+The public demo at the GitHub Pages URL uses mocked, pre-generated sample data. It does not connect to any Hermes install, does not read local state, and does not represent live telemetry from any agent session. The demo exists to let you explore the Labyrinth UI before installing the plugin locally.

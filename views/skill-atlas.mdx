@@ -1,0 +1,81 @@
+---
+title: "Skill Atlas: explore the agent's capability surface"
+description: "Inventory every Hermes skill across bundled, optional, user, and external sources. See enabled state, category, path, file count, and duplicates."
+keywords: ["skill atlas", "skills", "hermes labyrinth", "bundled skills", "optional skills", "user skills", "external skills", "capability surface"]
+---
+
+The Skill Atlas makes the agent's capability surface visible. It reads every skill Hermes can access — from the bundled repository skills, the optional-skills directory, and the user skills directory at `~/.hermes/skills/` — and presents them grouped by source with enabled/disabled state, category, path, modification time, and file count. Duplicate or broken skill definitions are flagged separately.
+
+## What the Skill Atlas shows
+
+The atlas is populated by `GET /api/plugins/hermes-labyrinth/skills`, which walks the skill directory trees and parses each `SKILL.md` frontmatter file. Skills are grouped into four source categories and sorted by source, category, and name within each group.
+
+### Skill sources
+
+<CardGroup cols={2}>
+  <Card title="bundled" icon="package">
+    Skills in the Hermes Agent repository's `skills/` directory. These are the agent's built-in capabilities and are present on any standard Hermes installation.
+  </Card>
+  <Card title="optional" icon="toggle-right">
+    Skills in the `optional-skills/` directory adjacent to the Hermes repository. Present when the optional skills package is installed alongside the main agent.
+  </Card>
+  <Card title="user" icon="user">
+    Skills created or installed by the user in `~/.hermes/skills/`. This is where the agent deposits new skills it creates during sessions, and where you can add your own.
+  </Card>
+  <Card title="external" icon="link">
+    Skills loaded from additional directories registered in Hermes configuration as external skill paths. May be empty if no external paths are configured.
+  </Card>
+</CardGroup>
+
+### Skill fields
+
+Each skill card in the atlas displays the following fields drawn from the `SKILL.md` frontmatter and the filesystem:
+
+| Field | Description |
+|---|---|
+| `name` | The skill name from frontmatter, or the directory name if frontmatter does not specify one. Truncated to 64 characters. |
+| `description` | A short description from frontmatter, or the first non-heading line of the skill body. Truncated to 220 characters. |
+| `category` | The subdirectory within the skill root when the skill is nested more than one level deep. `null` for top-level skills. |
+| `source` | One of `bundled`, `optional`, `user`, or `external`. |
+| `enabled` | `true` if the skill is not in the Hermes disabled-skills list; `false` if it has been disabled. |
+| `path` | Absolute filesystem path to the `SKILL.md` file. |
+| `relative_path` | Path of the `SKILL.md` relative to the source root directory. |
+| `last_modified` | Unix mtime of the `SKILL.md` file. |
+| `file_count` | Total number of files inside the skill directory, including the index and any supporting files. |
+
+## Enabled and disabled skills
+
+A disabled skill is kept on disk but the agent does not load it at runtime. The atlas marks disabled skills with a dimmed appearance and a `disabled` status indicator.
+
+<Note>
+  Disabled skills remain in the atlas inventory. If you want the agent to use a skill again, enable it in your Hermes configuration — the atlas will reflect the change on the next load.
+</Note>
+
+The atlas header shows the total skill count and the number of currently disabled skills.
+
+## Duplicate and broken definitions
+
+When two skill directories within the same source root share the same `name` value, the second occurrence is classified as a duplicate rather than added to the main list. Skill files that fail to parse — due to encoding errors, missing frontmatter, or filesystem permission issues — are also recorded in the duplicates list with an `error` field describing the cause.
+
+<Warning>
+  If a skill name appears in the duplicates list, only the first occurrence is active. Review the paths shown to determine which definition Hermes is loading and which to remove or rename.
+</Warning>
+
+The duplicates count is shown in the backend response at the `duplicates` field. The atlas surfaces this as a visible indicator when duplicates are detected.
+
+## Skill directory layout
+
+The backend resolves skill directories in this order of precedence:
+
+```text
+~/.hermes/skills/          ← user (highest precedence)
+<repo>/skills/             ← bundled
+<repo>/optional-skills/    ← optional
+<external paths>           ← external (lowest precedence)
+```
+
+Skills are deduplicated by name within each source. A user skill with the same name as a bundled skill will appear once under `user` and will shadow the bundled version at runtime.
+
+<Tip>
+  If a skill you expect to see is missing from the atlas, check whether it uses a platform condition in its frontmatter that excludes the current operating system, or whether the skill directory is empty.
+</Tip>

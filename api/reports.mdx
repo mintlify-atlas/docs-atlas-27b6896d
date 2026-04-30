@@ -1,0 +1,187 @@
+---
+title: "GET /reports — export journey as JSON or Markdown"
+description: "Export a complete journey as a redacted JSON report or a plain-text Markdown report, including guideposts and crossings truncated at 200 entries."
+keywords: ["reports", "export", "json export", "markdown export", "hermes labyrinth api"]
+---
+
+The reports endpoints produce exportable snapshots of a journey. Both formats apply secret redaction to all previews before returning. The Markdown format is suitable for sharing or archiving; the JSON format provides structured access to the same data for downstream tooling.
+
+<Note>
+  Both endpoints return 404 if the journey is not found or `state.db` is missing.
+</Note>
+
+## JSON export
+
+```
+GET /api/plugins/hermes-labyrinth/reports/{journey_id}.json
+```
+
+Returns a structured JSON report combining the journey detail and the full crossings payload.
+
+### Path parameters
+
+<ParamField path="journey_id" type="string" required>
+  The journey ID to export. Accepts a full session ID or any resolvable alias.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="detail" type="object" required>
+  The journey detail object — equivalent to the response from `GET /journeys/{journey_id}`.
+
+  <Expandable title="properties">
+    <ResponseField name="journey" type="Journey">
+      The normalized journey object. See [Journey object](/api/journeys#journey-object).
+    </ResponseField>
+    <ResponseField name="child_journeys" type="Journey[]">
+      Child journeys whose parent matches this journey.
+    </ResponseField>
+    <ResponseField name="crossing_count" type="number">
+      Total number of crossings for this journey.
+    </ResponseField>
+    <ResponseField name="guideposts" type="Guidepost[]">
+      Computed observations. See [Guidepost object](/api/guideposts#guidepost-object).
+    </ResponseField>
+    <ResponseField name="generated_at" type="float">
+      Unix timestamp when the detail object was assembled.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="crossings" type="object" required>
+  The full crossings payload — equivalent to the response from `GET /journeys/{journey_id}/crossings`.
+
+  <Expandable title="properties">
+    <ResponseField name="journey_id" type="string">
+      The resolved session ID.
+    </ResponseField>
+    <ResponseField name="crossings" type="Crossing[]">
+      All crossing events. See [Crossing object](/api/crossings#crossing-object).
+    </ResponseField>
+    <ResponseField name="threads" type="Thread[]">
+      Thread groupings. See [Thread object](/api/crossings#thread-object).
+    </ResponseField>
+    <ResponseField name="generated_at" type="float">
+      Unix timestamp when the crossings payload was assembled.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when the combined report was assembled.
+</ResponseField>
+
+---
+
+## Markdown export
+
+```
+GET /api/plugins/hermes-labyrinth/reports/{journey_id}.md
+```
+
+Returns a plain-text Markdown document (`text/plain`). The document contains four sections:
+
+- **Journey** — source, status, model, timing, message count, tool call count, and a redacted summary.
+- **Guideposts** — bullet list of computed observations, or a note that none were generated.
+- **Crossings** — one bullet per crossing with type, status, label, and a redacted evidence preview. Truncated after 200 crossings with a note showing how many were omitted.
+- **Missing Data Policy** — statement that unknown fields are left unknown and that the report is generated from local Hermes state.
+
+### Path parameters
+
+<ParamField path="journey_id" type="string" required>
+  The journey ID to export.
+</ParamField>
+
+### Truncation
+
+The Markdown report includes at most 200 crossings. When a journey has more than 200 crossings, a trailing line notes how many were omitted:
+
+```
+- Report truncated after 200 crossings of 847.
+```
+
+---
+
+## Examples
+
+<CodeGroup>
+
+```bash JSON export
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/reports/sess_abc123.json"
+```
+
+```bash Markdown export
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/reports/sess_abc123.md"
+```
+
+```bash Save Markdown to file
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/reports/sess_abc123.md" \
+  -o journey-sess_abc123.md
+```
+
+</CodeGroup>
+
+```json JSON response (abbreviated)
+{
+  "detail": {
+    "journey": {
+      "journey_id": "sess_abc123",
+      "source": "cli",
+      "status": "complete",
+      "started_at": 1717990000.0,
+      "ended_at": 1717990420.5,
+      "model": "claude-3-5-sonnet-20241022",
+      "summary": "Refactor authentication module"
+    },
+    "child_journeys": [],
+    "crossing_count": 24,
+    "guideposts": [
+      {
+        "kind": "tooling",
+        "severity": "notice",
+        "title": "High tool-call journey",
+        "detail": "",
+        "evidence_refs": [{"kind": "session", "id": "sess_abc123", "field": "tool_call_count"}]
+      }
+    ],
+    "generated_at": 1718000000.1
+  },
+  "crossings": {
+    "journey_id": "sess_abc123",
+    "crossings": ["..."],
+    "threads": ["..."],
+    "generated_at": 1718000000.2
+  },
+  "generated_at": 1718000000.3
+}
+```
+
+```text Markdown response
+# Hermes Labyrinth Report: sess_abc123
+
+## Journey
+
+- Source: cli
+- Status: complete
+- Model: claude-3-5-sonnet-20241022
+- Started: 1717990000.0
+- Ended: 1717990420.5
+- Messages: 18
+- Tool calls: 7
+- Summary: Refactor authentication module
+
+## Guideposts
+
+- [notice] High tool-call journey
+
+## Crossings
+
+- prompt / complete: User prompt
+  - Evidence: Refactor the auth module to use JWT.
+- tool_call / complete: read_file
+- tool_result / complete: read_file
+
+## Missing Data Policy
+
+Unknown fields were left unknown. This report is generated from local Hermes state and redacted before export.
+```

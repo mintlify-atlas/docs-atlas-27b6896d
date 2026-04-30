@@ -1,81 +1,65 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
-icon: 'rocket'
+title: "Get started: install Hermes Labyrinth"
+description: "Install Hermes Labyrinth as a Hermes Agent dashboard plugin in a few commands, then open the Labyrinth tab to start inspecting journeys and crossings."
+keywords: ["hermes labyrinth", "install", "dashboard plugin", "hermes agent", "quickstart"]
 ---
 
-## Get started in three steps
-
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+Hermes Labyrinth installs directly into the Hermes user plugin directory. No build step and no changes to the Hermes dashboard source are required — clone the repository, start or restart the dashboard, and the **Labyrinth** tab appears automatically.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Hermes Labyrinth is read-only. It never starts, stops, resumes, mutates, or creates Hermes sessions.
 </Note>
+
+## Install the plugin
+
+<Steps>
+  <Step title="Clone into the Hermes plugin directory">
+    Create the plugin directory if it does not exist, then clone the repository into it:
+
+    ```bash
+    mkdir -p ~/.hermes/plugins
+    git clone https://github.com/stainlu/hermes-labyrinth.git ~/.hermes/plugins/hermes-labyrinth
+    ```
+  </Step>
+
+  <Step title="Start or restart the dashboard">
+    If the Hermes dashboard is not running, start it:
+
+    ```bash
+    hermes dashboard
+    ```
+
+    The dashboard discovers plugins at startup and registers the **Labyrinth** tab automatically.
+  </Step>
+
+  <Step title="Rescan plugins if the dashboard is already running">
+    If the dashboard was already running before you cloned the plugin, trigger a rescan without restarting:
+
+    ```bash
+    curl http://127.0.0.1:9119/api/dashboard/plugins/rescan
+    ```
+  </Step>
+
+  <Step title="Open the Labyrinth tab">
+    In the Hermes dashboard, select the **Labyrinth** tab. You should see the Journey Index listing recent sessions, cron runs, and delegated work.
+  </Step>
+</Steps>
+
+## Optional: apply the theme scaffold
+
+Hermes Labyrinth ships an optional dashboard theme file. To install it:
+
+```bash
+mkdir -p ~/.hermes/dashboard-themes
+cp ~/.hermes/plugins/hermes-labyrinth/theme/hermes-labyrinth.yaml ~/.hermes/dashboard-themes/
+```
+
+Restart the dashboard after copying the theme file for it to take effect. The theme is cosmetic — removing it does not affect plugin behavior.
+
+## Notes on fresh installs
+
+<Tip>
+  On a fresh Hermes install, the Journey Index may show sparse or empty data until sessions, skills, or cron jobs exist. Run a few Hermes sessions and reload the Labyrinth tab to populate the views.
+</Tip>
+
+Crossings are inferred from existing Hermes session messages. Some durations, model switches, tool timings, and subagent links depend on what Hermes has recorded in local state. Missing data is shown explicitly rather than fabricated.

@@ -1,0 +1,250 @@
+---
+title: "GET /journeys — list sessions and journey detail"
+description: "List recent Hermes sessions as journeys with pagination, or fetch a single journey with guideposts, child journeys, and crossing count."
+keywords: ["journeys", "sessions", "hermes labyrinth api", "journey detail", "pagination"]
+---
+
+The journeys endpoints expose Hermes sessions normalized into journey objects. Use the list endpoint to browse recent activity across all sources, and the detail endpoint to inspect a specific journey's guideposts, child sessions, and crossing summary.
+
+## List journeys
+
+```
+GET /api/plugins/hermes-labyrinth/journeys
+```
+
+Returns a paginated list of journeys ordered by recency. When `state.db` does not exist, the response returns an empty list rather than an error.
+
+### Query parameters
+
+<ParamField query="limit" type="number" default="25">
+  Maximum number of journeys to return. Clamped to a maximum of 100.
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of journeys to skip before returning results.
+</ParamField>
+
+<ParamField query="include_children" type="boolean" default="true">
+  Whether to include child (delegated subagent) sessions in the listing.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="journeys" type="Journey[]" required>
+  Array of journey objects. See the [Journey object](#journey-object) section below.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Total number of sessions in the database (not just the current page).
+</ResponseField>
+
+<ResponseField name="limit" type="number" required>
+  The effective limit used for this response.
+</ResponseField>
+
+<ResponseField name="offset" type="number" required>
+  The effective offset used for this response.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Journey detail
+
+```
+GET /api/plugins/hermes-labyrinth/journeys/{journey_id}
+```
+
+Returns a single journey with its computed guideposts, child journeys, and a count of its crossings. Returns 404 if the journey is not found or `state.db` is missing.
+
+### Path parameters
+
+<ParamField path="journey_id" type="string" required>
+  The journey ID to retrieve. Accepts a full session ID or any resolvable alias.
+</ParamField>
+
+### Response fields
+
+<ResponseField name="journey" type="Journey" required>
+  The journey object. See the [Journey object](#journey-object) section below.
+</ResponseField>
+
+<ResponseField name="child_journeys" type="Journey[]" required>
+  Journeys whose `parent_journey_id` matches this journey's ID.
+</ResponseField>
+
+<ResponseField name="crossing_count" type="number" required>
+  Total number of crossings derived from the session's messages.
+</ResponseField>
+
+<ResponseField name="guideposts" type="Guidepost[]" required>
+  Computed observations for this journey. See the [Guideposts](/api/guideposts) page for the guidepost object shape.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Journey object
+
+<ResponseField name="journey_id" type="string">
+  Unique session identifier.
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  The surface that created this session. Common values: `cli`, `dashboard`, `gateway`, `cron`, `subagent`. Falls back to `"unknown"` if not recorded.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Derived lifecycle status. One of:
+
+  - `active` — session has no end time and was last active within the past 5 minutes.
+  - `open` — session has no end time but has been inactive for more than 5 minutes.
+  - `complete` — session ended normally.
+  - `interrupted` — session ended due to an interrupt, cancellation, or user-initiated stop.
+  - `failed` — session ended with an error or failure reason.
+</ResponseField>
+
+<ResponseField name="started_at" type="float | null">
+  Unix timestamp when the session started.
+</ResponseField>
+
+<ResponseField name="ended_at" type="float | null">
+  Unix timestamp when the session ended. `null` for active or open journeys.
+</ResponseField>
+
+<ResponseField name="last_active" type="float | null">
+  Unix timestamp of the most recent activity. Falls back to `started_at` if not recorded.
+</ResponseField>
+
+<ResponseField name="duration_ms" type="number | null">
+  Elapsed time in milliseconds. Computed from `started_at` to `ended_at` (or `last_active` for open sessions). `null` if `started_at` is not a number.
+</ResponseField>
+
+<ResponseField name="summary" type="string">
+  Human-readable session title or preview. Empty string if not available.
+</ResponseField>
+
+<ResponseField name="root_prompt" type="string">
+  The opening user message or session preview. Empty string if not available.
+</ResponseField>
+
+<ResponseField name="parent_journey_id" type="string | null">
+  ID of the parent session for delegated child journeys. `null` for top-level sessions.
+</ResponseField>
+
+<ResponseField name="model_sequence" type="string[]">
+  List of model identifiers used during the session. May be a single-element list if the model did not change.
+</ResponseField>
+
+<ResponseField name="model" type="string | null">
+  The most recently recorded model for this session.
+</ResponseField>
+
+<ResponseField name="message_count" type="number">
+  Total number of messages in the session.
+</ResponseField>
+
+<ResponseField name="tool_call_count" type="number">
+  Total number of tool calls made during the session.
+</ResponseField>
+
+<ResponseField name="api_call_count" type="number">
+  Total number of API calls recorded for this session.
+</ResponseField>
+
+<ResponseField name="estimated_cost" type="number | null">
+  Estimated cost in USD as recorded by Hermes. `null` if not available.
+</ResponseField>
+
+<ResponseField name="actual_cost" type="number | null">
+  Actual billed cost in USD. `null` if not available.
+</ResponseField>
+
+<ResponseField name="cost_status" type="string | null">
+  Cost tracking status as recorded by Hermes (e.g. `"estimated"`, `"actual"`). `null` if not recorded.
+</ResponseField>
+
+<ResponseField name="end_reason" type="string | null">
+  Raw end reason string from Hermes (e.g. `"compression"`, `"interrupt"`, `"error"`). `null` for active sessions.
+</ResponseField>
+
+<ResponseField name="token_counts" type="object">
+  Token usage breakdown for this session.
+
+  <Expandable title="properties">
+    <ResponseField name="input" type="number">
+      Input tokens consumed.
+    </ResponseField>
+    <ResponseField name="output" type="number">
+      Output tokens generated.
+    </ResponseField>
+    <ResponseField name="cache_read" type="number">
+      Tokens served from the prompt cache.
+    </ResponseField>
+    <ResponseField name="cache_write" type="number">
+      Tokens written to the prompt cache.
+    </ResponseField>
+    <ResponseField name="reasoning" type="number">
+      Reasoning tokens used (where supported by the model).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Examples
+
+<CodeGroup>
+
+```bash List journeys
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/journeys?limit=5&offset=0"
+```
+
+```bash Journey detail
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/journeys/sess_abc123"
+```
+
+</CodeGroup>
+
+```json List response
+{
+  "journeys": [
+    {
+      "journey_id": "sess_abc123",
+      "source": "cli",
+      "status": "complete",
+      "started_at": 1717990000.0,
+      "ended_at": 1717990420.5,
+      "last_active": 1717990420.5,
+      "duration_ms": 420500,
+      "summary": "Refactor authentication module",
+      "root_prompt": "Refactor the auth module to use JWT.",
+      "parent_journey_id": null,
+      "model_sequence": ["claude-3-5-sonnet-20241022"],
+      "model": "claude-3-5-sonnet-20241022",
+      "message_count": 18,
+      "tool_call_count": 7,
+      "api_call_count": 9,
+      "estimated_cost": 0.0312,
+      "actual_cost": null,
+      "cost_status": "estimated",
+      "end_reason": null,
+      "token_counts": {
+        "input": 24000,
+        "output": 3200,
+        "cache_read": 8000,
+        "cache_write": 1200,
+        "reasoning": 0
+      }
+    }
+  ],
+  "total": 42,
+  "limit": 5,
+  "offset": 0,
+  "generated_at": 1718000000.123
+}
+```

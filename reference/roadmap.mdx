@@ -1,0 +1,50 @@
+---
+title: "Roadmap: Now, Next, and Later for Hermes Labyrinth"
+description: "The Now / Next / Later roadmap for Hermes Labyrinth: current v0.1.0 stability goals, ES module conversion, integration tests, and v0.2.0 targets."
+keywords: ["roadmap", "hermes labyrinth", "v0.1.0", "v0.2.0", "planned features", "future work"]
+---
+
+Hermes Labyrinth `v0.1.0` is a hackathon preview. The current focus is keeping the demo, the installable bundle, and the test suite stable. Deeper work on source modularity and integration tests is planned for the next cycle, with `v0.2.0` targeting both. This page summarizes the roadmap across three horizons.
+
+## Now
+
+The `v0.1.x` line is the current stable installable preview. Work in this horizon focuses on maintaining what already works:
+
+- Keep the public demo stable and all visible actions either working or clearly read-only.
+- Keep `dashboard/dist/` reproducible from `src/` — running `npm run build` on the source must produce a byte-stable output.
+- Keep the canonical GitHub Pages URL clean while asset references use content-hash query strings for cache busting.
+- Keep browser smoke tests and API fixture tests passing on every change.
+- Maintain `v0.1.x` as the installable hackathon preview line.
+
+## Next
+
+The next development cycle addresses the structural gaps identified in `v0.1.0`:
+
+<Steps>
+  <Step title="Convert src/parts into true ES modules">
+    Refactor `src/parts/*.js` from ordered browser chunks into explicit ES modules with focused exports and imports — separating component, data, normalization, and plugin-registration concerns. This is a prerequisite for better testability and for tree-shaking in future builds.
+  </Step>
+  <Step title="Add backend tests for plugin_api.py">
+    Add tests covering state-db absence, journey listing, crossing inference, redaction, guidepost generation, and report generation. These complement the existing API normalization fixture tests but test the full backend logic paths.
+  </Step>
+  <Step title="Add Hermes dashboard integration tests">
+    Add full integration tests for plugin mounting, tab registration, and real local-state queries against a running Hermes dashboard. This is the gap between the current smoke-test coverage and a fully verified install path.
+  </Step>
+</Steps>
+
+## Later
+
+Longer-horizon improvements planned after the Next cycle completes:
+
+- **Lazy crossing loading** — load crossings only for the selected journey instead of all listed journeys on page load. Required for usability with larger local Hermes histories.
+- **Live streaming / replay** — stream or replay active crossings as an agent session runs, rather than snapshotting completed state.
+- **Richer model-ferry views** — more detailed visualization of provider and model transitions across and within sessions.
+- **Subagent tree** — a parent/child journey navigation view for sessions with delegated subagents.
+- **Optional hook recording** — a Hermes hook integration for capturing precise tool durations and boundary events directly rather than inferring them from session messages.
+- **Cut `v0.2.0`** — the `v0.2.0` release targets completion of ES module conversion and Hermes dashboard integration tests. It is not scheduled; it will ship when both are done.
+
+<Note>
+  `v0.2.0` is the next named release target. It requires ES module conversion of `src/parts/` and full Hermes dashboard integration tests to be in place before cutting.
+</Note>
+
+See [Known limitations](/reference/known-limitations) for the current gaps in `v0.1.0` that this roadmap addresses.

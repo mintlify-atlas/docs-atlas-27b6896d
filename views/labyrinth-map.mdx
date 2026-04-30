@@ -1,0 +1,88 @@
+---
+title: "Labyrinth Map: navigate crossings inside a journey"
+description: "Visualize every boundary event in a Hermes journey. Switch between thread, corridor, and flight-strip modes to navigate crossings and open the inspector."
+keywords: ["labyrinth map", "crossings", "journey", "thread", "corridor", "flight strip", "hermes labyrinth", "map modes"]
+---
+
+Once you select a journey in the Journey Index, the Labyrinth Map renders its crossings as an ordered, interactive path. Each node on the map is a boundary event — a prompt entering the agent loop, a tool call firing, a model switching, a subagent spawning — and clicking any node opens the Crossing Inspector with full evidence for that event.
+
+## What the Labyrinth Map shows
+
+The map visualizes all crossings returned by `GET /api/plugins/hermes-labyrinth/journeys/{journey_id}/crossings`. Crossings are ordered by the sequence they appear in the session message history and grouped into thread lanes for navigation.
+
+### Crossing types on the map
+
+Each crossing has a `type` that determines its glyph, lane assignment, and how the inspector presents its data.
+
+| Type | What it represents |
+|---|---|
+| `prompt` | A user message entering the agent loop. |
+| `tool_call` | The agent invoking a tool with arguments. |
+| `tool_result` | The tool returning a result back to the agent. |
+| `assistant_response` | An assistant message with prose content (no tool call). |
+| `context_compression` | The session ending through context compression — a new context window will begin. |
+| `subagent_spawn` | The agent delegating a task to a child session via `delegate_task`. |
+| `subagent_return` | The child session completing and returning a result to the parent. |
+| `approval` | An approval boundary — the agent requested human permission or a permission check occurred. |
+
+### Thread groupings
+
+Crossings are organized into four named thread lanes. These lanes are visible as separate columns in thread mode and as separate rows in flight-strip mode.
+
+| Thread | Crossings it contains |
+|---|---|
+| Main passage | `prompt`, `assistant_response`, and unrecognized types. The primary conversation flow. |
+| Tool passage | `tool_call` and `tool_result`. Tool invocations branch off the main passage and return to it. |
+| Delegation passage | `subagent_spawn` and `subagent_return`. Child agent handoffs appear to the left of the main passage. |
+| Threshold passage | `approval` and `context_compression`. Safety and context boundaries appear as highlighted crossings. |
+
+## Display modes
+
+Three display modes are available from the toggle in the journey header. Each mode renders the same crossings from a different visual perspective.
+
+<Tabs>
+  <Tab title="Thread mode">
+    The default view. Crossings are arranged vertically in time order on a central spine. Tool passage crossings branch right; delegation passage crossings branch left; threshold passage crossings are highlighted with a gold bar across the spine.
+
+    Thread mode is best for understanding the sequence of events and spotting where the agent paused, looped, or changed direction.
+  </Tab>
+  <Tab title="Corridor mode">
+    Crossings are arranged in a boustrophedon grid — rows that alternate left-to-right and right-to-left, like a maze corridor. A single path line connects all crossings in order.
+
+    Corridor mode is useful for scanning dense journeys with many crossings without scrolling far vertically.
+  </Tab>
+  <Tab title="Flight-strip mode">
+    Crossings are arranged horizontally on a timeline baseline with four horizontal rows for the four thread lanes: threshold at the top, tool below it, main in the middle, and delegation at the bottom.
+
+    Flight-strip mode is best for comparing timing across lanes and spotting tool chains that run in parallel with approval or compression events.
+  </Tab>
+</Tabs>
+
+## Navigating the map
+
+<Steps>
+  <Step title="Open a journey">
+    Select any journey in the Journey Index. The map renders automatically and loads crossings from the backend.
+  </Step>
+  <Step title="Choose a display mode">
+    Use the **Thread / Corridor / Flight strip** toggle in the journey header to switch views. The same crossing data is shown in all three modes.
+  </Step>
+  <Step title="Filter to thresholds only">
+    Enable the **Thresholds only** checkbox to hide all crossings except `approval` and `context_compression`. This is useful for quickly checking whether any approval boundaries or context resets occurred.
+  </Step>
+  <Step title="Select a crossing">
+    Click any node on the map to open the Crossing Inspector on the right. The inspector shows full evidence for the selected crossing, including input/output previews, timing, actor, target, and evidence references.
+  </Step>
+</Steps>
+
+## Status indicators
+
+Crossing nodes carry a visual status state that mirrors the `status` field:
+
+- A **failed** crossing is rendered with a red dashed ring and danger color on its label.
+- An **active** crossing (live session) pulses with an animated ring.
+- The **selected** crossing has an enlarged, filled node.
+
+<Note>
+  Guideposts generated for the journey appear in a panel alongside the map. A guidepost referencing a specific crossing includes a link you can click to jump directly to that crossing on the map.
+</Note>

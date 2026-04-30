@@ -1,0 +1,85 @@
+---
+title: "Cron Gate: scheduled Hermes autonomy and job history"
+description: "List every Hermes cron job with its schedule, run times, status, workdir, and last error. Each run creates a journey you can inspect in the index."
+keywords: ["cron gate", "cron jobs", "scheduled", "hermes labyrinth", "autonomy", "next run", "last run", "job history"]
+---
+
+The Cron Gate shows the scheduled side of Hermes Agent autonomy — work that begins without a direct user prompt. Each configured cron job appears as a row with its schedule expression, next and last run timestamps, enabled state, working directory, model, and any error from the most recent run. Each run becomes its own journey and links back to the Journey Index.
+
+## What the Cron Gate shows
+
+The view is populated by `GET /api/plugins/hermes-labyrinth/cron`, which reads the active cron configuration from the Hermes cron subsystem. All jobs are included regardless of enabled state.
+
+### Cron job fields
+
+<AccordionGroup>
+  <Accordion title="Identity and state">
+    | Field | Description |
+    |---|---|
+    | `id` | Unique identifier for the cron job as assigned by Hermes. |
+    | `name` | Human-readable job name shown in the job row header. |
+    | `enabled` | Whether the job is active. Disabled jobs appear in the list but do not run. |
+    | `state` | Internal scheduler state for the job (for example, `idle`, `running`). |
+  </Accordion>
+
+  <Accordion title="Schedule and timing">
+    | Field | Description |
+    |---|---|
+    | `schedule_display` | The human-readable description of the schedule (for example, "every day at 09:00"). |
+    | `next_run_at` | Timestamp of the next scheduled run. |
+    | `last_run_at` | Timestamp of the most recent run. |
+    | `last_status` | Status of the most recent run: typically `ok`, `failed`, or empty if the job has never run. |
+    | `last_error` | Error message from the most recent failed run. Truncated to 240 characters. |
+  </Accordion>
+
+  <Accordion title="Execution context">
+    | Field | Description |
+    |---|---|
+    | `deliver` | The delivery channel or target for the job output (for example, a webhook URL or channel name). |
+    | `workdir` | The filesystem path the agent uses as its working directory when the job runs. |
+    | `model` | The model identifier the job is configured to use. |
+    | `provider` | The provider for the configured model. |
+    | `skills` | List of skill names the job is configured to load. Empty array if none are specified. |
+  </Accordion>
+</AccordionGroup>
+
+## How cron jobs link to journeys
+
+Each cron run creates a Hermes session with `source` set to `cron`. That session appears in the Journey Index as a regular journey, indistinguishable from an interactive session except by its source value.
+
+To trace a cron job's recent runs:
+
+<Steps>
+  <Step title="Note the job name in the Cron Gate">
+    The job name and workdir identify which journey belongs to a given job.
+  </Step>
+  <Step title="Open the Journey Index">
+    Switch to the Journey Index view and filter by source `cron`.
+  </Step>
+  <Step title="Match by workdir or timing">
+    Cron sessions started from the same workdir at the expected schedule time correspond to that job's runs. The `root_prompt` field often contains the job's configured prompt.
+  </Step>
+  <Step title="Open the journey">
+    Select the matching journey to open its Labyrinth Map and inspect the full crossing timeline for that run.
+  </Step>
+</Steps>
+
+<Note>
+  Direct linking from a cron job row to its journey list is not available in the current version. Use the source filter in the Journey Index combined with timing and workdir to match runs to jobs.
+</Note>
+
+## Failed job indicator
+
+When a job's `last_status` is `failed`, the row is highlighted and the `last_error` message appears in red below the job name. The error is truncated to 240 characters — if the full error is needed, open the corresponding journey's crossing timeline and look for failed crossings.
+
+<Warning>
+  A cron job that has failed its last run will continue appearing in the Cron Gate with its next scheduled run intact. Hermes does not automatically disable failing jobs. Check the last error and the linked journey for the root cause before the next run fires.
+</Warning>
+
+## Notes when no cron jobs are configured
+
+<Tip>
+  If no cron jobs are configured in Hermes, the Cron Gate shows an empty table. This is expected on developer installations where scheduled autonomy has not been set up. Configure jobs through your Hermes cron configuration to populate this view.
+</Tip>
+
+If the cron subsystem is unavailable or returns an error, the Cron Gate displays the error message from the `error` field in the API response rather than silently showing an empty table.

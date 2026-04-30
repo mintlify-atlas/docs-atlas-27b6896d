@@ -1,0 +1,49 @@
+---
+title: "Explore the Hermes Labyrinth live demo"
+description: "The live demo runs the full dashboard UI against mocked state. Explore every view before installing locally against your own Hermes sessions."
+keywords: ["hermes labyrinth", "demo", "live demo", "mocked state", "journey index", "labyrinth map"]
+---
+
+The [Hermes Labyrinth live demo](https://stainlu.github.io/hermes-labyrinth/) is a static GitHub Pages build that runs the full dashboard UI against mocked Hermes state. It requires no Hermes install and no local setup — open it in a browser to explore the interface before deciding to install the plugin locally.
+
+## What the demo shows
+
+The demo provides a representative walk-through of the main Hermes Labyrinth views:
+
+- **Journey index** — a list of recent agent sessions across CLI, dashboard, gateway, cron, and delegated sources, with status, model, duration, and search.
+- **Labyrinth map** — ordered crossings through a selected journey, rendered in thread, corridor, or flight-strip mode.
+- **Crossing inspector** — input/output previews, status, duration, evidence references, and guideposts for any crossing you select.
+- **Skill atlas** — bundled, optional, external, and user skill inventory with enabled/disabled state.
+- **Cron gate** — scheduled autonomy with next runs, last failures, workdirs, and links to triggered journeys.
+- **Model ferry** — model and provider transitions, context compression events, and token budgets across sessions.
+- **Guideposts** — computed observations derived from the mocked journey data.
+- **Reports** — export controls for redacted Markdown and JSON journey reports.
+
+## Demo vs. installed plugin
+
+<Note>
+  The demo is read-only and uses mocked data. It does not connect to a running Hermes instance and does not reflect your local agent history.
+</Note>
+
+| | Live demo | Installed plugin |
+|---|---|---|
+| Data source | Mocked Hermes state | Your local `~/.hermes/` state |
+| Requires Hermes | No | Yes |
+| Mutates sessions | No | No |
+| Secret redaction | Applied to mocked data | Applied to real local data |
+| Reports | Generated from mocked data | Generated from real journeys |
+
+The installed plugin reads real Hermes state through read-only plugin routes under `/api/plugins/hermes-labyrinth/`. Everything else — the UI, the views, the crossing inspector, the export controls — behaves identically to what you see in the demo.
+
+## Open the demo
+
+Visit **[stainlu.github.io/hermes-labyrinth](https://stainlu.github.io/hermes-labyrinth/)** to explore the live demo.
+
+<CardGroup cols={2}>
+  <Card title="Install the plugin" icon="rocket" href="/quickstart">
+    Run Hermes Labyrinth against your own local Hermes sessions in a few commands.
+  </Card>
+  <Card title="Journey index view" icon="list" href="/views/journey-index">
+    Learn what the Journey Index shows and how to filter and search your sessions.
+  </Card>
+</CardGroup>

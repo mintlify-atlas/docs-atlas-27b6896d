@@ -1,133 +1,69 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
-icon: 'star'
+title: "Hermes Labyrinth: agent observability for Hermes"
+description: "Hermes Labyrinth is a read-only dashboard plugin that maps Hermes Agent sessions as journeys through crossings, skills, cron jobs, and model transitions."
 ---
 
-## Setting up
+Hermes Labyrinth turns every Hermes Agent session into a navigable map. Prompts, tool calls, tool results, model switches, subagent delegations, approvals, memory events, context compressions, and scheduled runs all become crossings on a journey you can inspect, filter, and export — without ever mutating agent state.
 
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the plugin, restart the dashboard, and open the Labyrinth tab in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Live Demo" icon="play" href="/demo">
+    Explore the public demo with mocked Hermes state before installing locally.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Core Views" icon="layout-dashboard" href="/views/journey-index">
+    Tour the Journey Index, Labyrinth Map, Crossing Inspector, Skill Atlas, and more.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Browse the read-only plugin API endpoints used by the dashboard frontend.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What Hermes Labyrinth shows you
 
-Everything you need to create world-class documentation.
+Hermes Agent crosses many boundaries during autonomous work: user intent into tool action, local machine into network services, single agent into delegated subagents, short-term context into memory, and manual work into scheduled cron jobs. Labyrinth makes every one of those crossings visible.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
+<CardGroup cols={3}>
+  <Card title="Journey Index" icon="list" href="/views/journey-index">
+    All recent sessions — CLI, dashboard, gateway, cron, and delegated — with status, model, duration, and search.
   </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
+  <Card title="Labyrinth Map" icon="route" href="/views/labyrinth-map">
+    Ordered crossings through a selected journey in thread, corridor, or flight-strip mode.
   </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
+  <Card title="Crossing Inspector" icon="magnifying-glass" href="/views/crossing-inspector">
+    Input/output previews, status, duration, evidence refs, and guideposts for any crossing.
   </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
+  <Card title="Skill Atlas" icon="book-open" href="/views/skill-atlas">
+    Bundled, optional, external, and user skill inventory with enabled/disabled state.
   </Card>
-</Columns>
+  <Card title="Cron Gate" icon="clock" href="/views/cron-gate">
+    Scheduled autonomy: next runs, last failures, workdirs, and links to triggered journeys.
+  </Card>
+  <Card title="Model Ferry" icon="arrow-right-arrow-left" href="/views/model-ferry">
+    Model and provider transitions, context compression events, and token budgets across sessions.
+  </Card>
+</CardGroup>
 
-## Make your content agent ready
+## Read-only by design
 
-Make your docs work for humans and AI agents alike.
+<Note>
+  Hermes Labyrinth never starts, stops, resumes, mutates, or creates Hermes sessions. It is a pure observer — safe to run alongside any active agent work.
+</Note>
 
-<Columns cols={2}>
-  <Card
-    title="Prompt component"
-    icon="robot"
-    href="/agent-ready/prompt"
-  >
-    Embed shareable AI prompts readers can copy or open in Cursor.
-  </Card>
-  <Card
-    title="Visibility"
-    icon="eye"
-    href="/agent-ready/visibility"
-  >
-    Show different content to humans and agents reading your docs.
-  </Card>
-  <Card
-    title="Contextual menu"
-    icon="bolt"
-    href="/agent-ready/contextual"
-  >
-    Give readers one-click access to Claude, ChatGPT, Cursor, and more.
-  </Card>
-  <Card
-    title="AI coding tools"
-    icon="wand-magic-sparkles"
-    href="/ai-tools/claude-code"
-  >
-    Set up Claude Code, Cursor, or Windsurf with Mintlify's skill.
-  </Card>
-</Columns>
+Reports, previews, and all API responses have secret redaction applied before display. Unknown fields are shown as unknown rather than fabricated.
 
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<Steps>
+  <Step title="Install the plugin">
+    Clone into `~/.hermes/plugins/` and start or restart the Hermes dashboard.
+  </Step>
+  <Step title="Open the Labyrinth tab">
+    Select the **Labyrinth** tab in the Hermes dashboard to see your journey index.
+  </Step>
+  <Step title="Explore a journey">
+    Click any journey to open the Labyrinth Map and inspect individual crossings.
+  </Step>
+  <Step title="Export a report">
+    Use the Reports view to download a redacted Markdown or JSON report for any journey.
+  </Step>
+</Steps>

@@ -1,0 +1,146 @@
+---
+title: "GET /skills — full Hermes skill inventory"
+description: "Returns the full skill inventory across bundled, optional, user, and external skill directories, with enabled status, metadata, and duplicate detection."
+keywords: ["skills", "skill inventory", "bundled skills", "hermes labyrinth api"]
+---
+
+The skills endpoint scans all known skill source directories and returns a unified inventory of every skill found on this machine. Skills are discovered by locating `SKILL.md` index files, parsing their frontmatter, and grouping them by source. Duplicate skill names across sources are tracked separately rather than silently overwriting each other.
+
+<Note>
+  This endpoint returns 404 if `state.db` is missing. If a skill directory does not exist, it is silently skipped rather than treated as an error.
+</Note>
+
+## Endpoint
+
+```
+GET /api/plugins/hermes-labyrinth/skills
+```
+
+## Parameters
+
+This endpoint accepts no query parameters.
+
+## Response fields
+
+<ResponseField name="skills" type="Skill[]" required>
+  Array of skill objects sorted by source, category, and name. See [Skill object](#skill-object) below.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Number of unique skills returned in the `skills` array.
+</ResponseField>
+
+<ResponseField name="duplicates" type="object[]" required>
+  Skills whose names collide with an earlier entry, or skills that could not be parsed. Capped at 50 entries.
+
+  <Expandable title="properties">
+    <ResponseField name="name" type="string">
+      The skill name that collides with an existing entry.
+    </ResponseField>
+    <ResponseField name="path" type="string">
+      Absolute path to the duplicate `SKILL.md` file.
+    </ResponseField>
+    <ResponseField name="source" type="string">
+      Source category of the duplicate (`bundled`, `optional`, `user`, `external`).
+    </ResponseField>
+    <ResponseField name="error" type="string">
+      Present only when the entry represents a parse error rather than a name collision.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="disabled_count" type="number" required>
+  Number of skills in the `skills` array that have `enabled: false`.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Skill object
+
+<ResponseField name="name" type="string">
+  Skill name, taken from the `name` frontmatter field or the skill directory name. Truncated to 64 characters.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Description from frontmatter, or the first non-heading line of the skill body if frontmatter description is absent. Redacted and truncated to 220 characters.
+</ResponseField>
+
+<ResponseField name="category" type="string | null">
+  The top-level subdirectory under the skill root (e.g. `"development"`, `"writing"`). `null` for flat skill layouts.
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Where this skill was discovered:
+
+  - `bundled` — skills in the Hermes Agent repository's `skills/` directory.
+  - `optional` — skills in the `optional-skills/` directory adjacent to the Hermes repository.
+  - `user` — skills in the user directory (`~/.hermes/skills/`).
+  - `external` — skills in additional directories registered with Hermes configuration.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether this skill is enabled. `false` if the skill name appears in the disabled skills list.
+</ResponseField>
+
+<ResponseField name="path" type="string">
+  Absolute path to the `SKILL.md` file.
+</ResponseField>
+
+<ResponseField name="relative_path" type="string">
+  Path relative to the skill source root directory.
+</ResponseField>
+
+<ResponseField name="last_modified" type="float">
+  Unix timestamp of the `SKILL.md` file's last modification time.
+</ResponseField>
+
+<ResponseField name="file_count" type="number">
+  Total number of files in the skill's directory (including all subdirectories).
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl http://127.0.0.1:9119/api/plugins/hermes-labyrinth/skills
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "skills": [
+    {
+      "name": "git-workflow",
+      "description": "Step-by-step instructions for common Git operations including branching, rebasing, and conflict resolution.",
+      "category": "development",
+      "source": "bundled",
+      "enabled": true,
+      "path": "/home/user/.hermes/plugins/hermes-labyrinth/skills/development/git-workflow/SKILL.md",
+      "relative_path": "development/git-workflow/SKILL.md",
+      "last_modified": 1717900000.0,
+      "file_count": 3
+    },
+    {
+      "name": "custom-deploy",
+      "description": "Deploy to staging and production via the internal CI pipeline.",
+      "category": null,
+      "source": "user",
+      "enabled": false,
+      "path": "/home/user/.hermes/skills/custom-deploy/SKILL.md",
+      "relative_path": "custom-deploy/SKILL.md",
+      "last_modified": 1717950000.0,
+      "file_count": 2
+    }
+  ],
+  "total": 2,
+  "duplicates": [],
+  "disabled_count": 1,
+  "generated_at": 1718000000.123
+}
+```

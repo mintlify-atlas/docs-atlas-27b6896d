@@ -1,0 +1,93 @@
+---
+title: "Hermes Labyrinth: read-only Hermes Agent observability"
+description: "Hermes Labyrinth is a read-only Hermes Agent dashboard plugin that maps every session as a journey through crossings, threads, artifacts, and guideposts."
+keywords: ["hermes labyrinth", "hermes agent", "observability", "dashboard plugin", "journey", "crossing"]
+---
+
+Hermes Labyrinth is a read-only observability plugin for [Hermes Agent](https://github.com/NousResearch/hermes-agent). It installs into the Hermes dashboard and adds a **Labyrinth** tab that turns every agent session into a navigable map of crossings — prompts, tool calls, tool results, model switches, subagent delegations, approvals, memory events, context compressions, cron runs, and exportable evidence — without ever mutating agent state. This page explains what Hermes Labyrinth is, the five core concepts that organize its data model, and how the plugin fits into the Hermes dashboard architecture.
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install the plugin and open the Labyrinth tab in a few commands.
+  </Card>
+  <Card title="Live demo" icon="play" href="/demo">
+    Explore the public demo with mocked Hermes state before installing.
+  </Card>
+  <Card title="API overview" icon="code" href="/api/overview">
+    Browse the read-only plugin API endpoints used by the dashboard.
+  </Card>
+</CardGroup>
+
+## Core concepts
+
+Hermes Labyrinth organizes everything it observes around five concepts drawn from the data model in the plugin backend.
+
+### Journey
+
+A journey is the top-level unit of agent activity — usually a Hermes session, but also a cron run, gateway interaction, or delegated child session. Each journey carries a `source` (`cli`, `dashboard`, `gateway`, `cron`, `subagent`), a `status` (`active`, `complete`, `interrupted`, `failed`, `unknown`), a model sequence, timing, and an optional link to a parent journey when delegation is involved.
+
+The **Journey Index** view lists recent journeys across all surfaces so you can find and open the one you want to investigate.
+
+### Crossing
+
+A crossing is a single boundary event inside a journey. Crossings are the fundamental unit of the Labyrinth Map. Examples include:
+
+- A user prompt entering the agent loop
+- A tool call and its result returning
+- A context compression event
+- A model or provider switch
+- A skill invocation
+- A memory read, write, or skip
+- A subagent spawning or timing out
+- An approval request or denial
+- A secret or redaction boundary
+
+Each crossing has a `type`, `label`, `status`, timing fields, input/output previews, and references to supporting evidence. The **Crossing Inspector** view shows full details for any selected crossing.
+
+### Thread
+
+A thread links related crossings into a navigable path. Where crossings are individual boundary events, a thread groups them into a meaningful sequence — a tool chain, a model fallback sequence, a parent agent delegating to children, or a cron job triggering a session. Threads are the user's navigational unit inside the Labyrinth Map.
+
+### Artifact
+
+An artifact is durable evidence produced or touched during a journey. Artifacts include edited files, generated images, skill files, memory entries, log excerpts, screenshots, external messages, and exported reports. The Crossing Inspector links to artifacts when they are available in local Hermes state.
+
+### Guidepost
+
+A guidepost is a computed interpretation that helps you orient inside a journey. Rather than raw data, guideposts surface meaningful observations derived from local evidence — for example:
+
+- "This journey looped on the same failing tool 4 times."
+- "A subagent timed out before making an API call."
+- "The model switched after context compression."
+- "This skill has not been used since creation."
+
+Guideposts are always explainable from local evidence. The **Guideposts** view lists them for any journey, and they also appear inline in the Crossing Inspector.
+
+## Read-only by design
+
+<Note>
+  Hermes Labyrinth never starts, stops, resumes, mutates, or creates Hermes sessions. It is a pure observer and is safe to run alongside any active agent work.
+</Note>
+
+Secret redaction is applied to all previews and reports before display. Unknown fields are shown as unknown rather than fabricated.
+
+## Architecture
+
+Hermes Labyrinth installs as a standard Hermes dashboard plugin. The plugin directory lives at `~/.hermes/plugins/hermes-labyrinth/` and registers a **Labyrinth** tab that appears after the Sessions tab in the dashboard navigation.
+
+```text
+Hermes local state
+  ├─ state.db sessions/messages
+  ├─ skills directories
+  └─ cron config
+        ↓
+dashboard/plugin_api.py   (read-only FastAPI routes)
+        ↓
+/api/plugins/hermes-labyrinth/*
+        ↓
+dashboard/dist/index.js + labyrinth.css
+        ↓
+Hermes dashboard tab: Labyrinth
+```
+
+The backend (`plugin_api.py`) exposes read-only routes under `/api/plugins/hermes-labyrinth/`, normalizes sessions, skills, logs, cron jobs, and guideposts from local Hermes state, and redacts secrets before returning previews. The frontend loads from the checked-in `dashboard/dist/` bundle — no rebuild of the Hermes dashboard source is required.

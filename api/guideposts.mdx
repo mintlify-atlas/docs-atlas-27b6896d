@@ -1,0 +1,139 @@
+---
+title: "GET /guideposts — automated observations across journeys"
+description: "Returns computed guidepost observations derived from the most recent journeys, each backed by local evidence from the Hermes state database."
+keywords: ["guideposts", "observations", "anomalies", "hermes labyrinth api"]
+---
+
+The guideposts endpoint returns automated observations generated from recent journeys. Each guidepost is derived from local evidence — session data, crossing patterns, tool call counts, and timing — and is not fabricated. Guideposts are also available per-journey via the [journey detail endpoint](/api/journeys).
+
+## Endpoint
+
+```
+GET /api/plugins/hermes-labyrinth/guideposts
+```
+
+## Query parameters
+
+<ParamField query="limit" type="number" default="10">
+  Maximum number of recent journeys to scan when generating guideposts. Guideposts from all scanned journeys are returned together, so the total number of guideposts may exceed this value.
+</ParamField>
+
+## Response fields
+
+<ResponseField name="guideposts" type="Guidepost[]" required>
+  Flat list of guidepost objects from across the scanned journeys. See [Guidepost object](#guidepost-object) below.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Total number of guideposts returned.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Guidepost object
+
+<ResponseField name="kind" type="string">
+  Category of observation. Examples include:
+
+  - `missing_data` — expected fields were not recorded.
+  - `delegation` — subagent delegation was present.
+  - `context` — context compression occurred.
+  - `duration` — the journey ran longer than expected.
+  - `tooling` — an unusually high number of tool calls.
+  - `failure` — one or more crossings failed.
+  - `loop` — the same tool failed repeatedly.
+  - `approval` — an approval boundary was crossed.
+</ResponseField>
+
+<ResponseField name="severity" type="string">
+  Importance level of the observation. One of:
+
+  - `info` — informational, no action needed.
+  - `notice` — worth reviewing.
+  - `warning` — indicates a potential problem.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Short, human-readable description of the observation (e.g. `"3 failed crossing(s)"`).
+</ResponseField>
+
+<ResponseField name="detail" type="string">
+  Additional context for the observation. Empty string if no extra detail was generated.
+</ResponseField>
+
+<ResponseField name="evidence_refs" type="object[]">
+  References to the local data that produced this guidepost.
+
+  <Expandable title="properties">
+    <ResponseField name="kind" type="string">
+      Reference kind: `"session"`, `"crossing"`, or `"tool"`.
+    </ResponseField>
+    <ResponseField name="id" type="string | null">
+      ID of the referenced session or crossing.
+    </ResponseField>
+    <ResponseField name="field" type="string">
+      Specific field referenced (present for session-level evidence).
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      Tool name (present for tool-level evidence).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="journey_id" type="string">
+  The journey this guidepost was generated from.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl "http://127.0.0.1:9119/api/plugins/hermes-labyrinth/guideposts?limit=5"
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "guideposts": [
+    {
+      "kind": "failure",
+      "severity": "warning",
+      "title": "2 failed crossing(s)",
+      "detail": "",
+      "evidence_refs": [
+        {"kind": "crossing", "id": "m105-tool-result"},
+        {"kind": "crossing", "id": "m109-tool-result"}
+      ],
+      "journey_id": "sess_abc123"
+    },
+    {
+      "kind": "loop",
+      "severity": "warning",
+      "title": "Repeated failing tool: bash",
+      "detail": "2 failed results were observed.",
+      "evidence_refs": [
+        {"kind": "tool", "name": "bash"}
+      ],
+      "journey_id": "sess_abc123"
+    },
+    {
+      "kind": "duration",
+      "severity": "notice",
+      "title": "Long journey",
+      "detail": "Duration exceeded 30 minutes.",
+      "evidence_refs": [
+        {"kind": "session", "id": "sess_def456", "field": "duration_ms"}
+      ],
+      "journey_id": "sess_def456"
+    }
+  ],
+  "total": 3,
+  "generated_at": 1718000000.123
+}
+```

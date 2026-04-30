@@ -1,0 +1,171 @@
+---
+title: "Export journey reports as Markdown or JSON"
+description: "Generate a redacted report for any Hermes journey. Markdown is human-readable; JSON carries the full journey detail and crossings payload for programmatic use."
+keywords: ["reports", "export", "markdown", "json", "journey report", "redaction", "missing data policy", "hermes labyrinth"]
+---
+
+Hermes Labyrinth can export a complete report for any recorded journey in two formats — a human-readable Markdown document and a machine-readable JSON payload. Both formats are generated on demand from local Hermes state, with sensitive content redacted before the data leaves the plugin API. Reports are the primary way to share what happened in a journey outside the dashboard.
+
+## Export formats
+
+<Tabs>
+  <Tab title="Markdown">
+    The Markdown report is designed to be read and shared directly. It groups journey information into four sections: a journey summary, a guideposts list, an ordered crossings list, and a missing data policy statement. The report truncates after 200 crossings and adds a notice when the journey contained more. Evidence previews embedded in the report are redacted before export.
+
+    **What the Markdown report includes:**
+
+    | Section | Contents |
+    |---|---|
+    | Journey summary | Source, status, model sequence, `started_at`, `ended_at`, message count, tool call count, and a redacted summary excerpt |
+    | Guideposts | All computed guideposts for the journey, each shown with its severity and title |
+    | Crossings list | Up to 200 crossings showing type, status, label, and an evidence preview where available |
+    | Missing Data Policy | A statement confirming unknown fields were left unknown and the report was redacted before export |
+
+    **Example Markdown report:**
+
+    ```markdown
+    # Hermes Labyrinth Report: sess_01j9abc123
+
+    ## Journey
+
+    - Source: cli
+    - Status: complete
+    - Model: claude-3-5-sonnet-20241022
+    - Started: 1714500000.0
+    - Ended: 1714501800.0
+    - Messages: 12
+    - Tool calls: 7
+    - Summary: Refactor authentication module and write unit tests
+
+    ## Guideposts
+
+    - [notice] High tool-call journey
+    - [warning] 1 failed crossing(s)
+    - [warning] Repeated failing tool: run_bash
+
+    ## Crossings
+
+    - prompt / complete: User prompt
+      - Evidence: Refactor the authentication module and add unit tests for the...
+    - tool_call / complete: read_file
+      - Evidence: {"path": "src/auth/session.py"}
+    - tool_result / complete: read_file
+      - Evidence: import hashlib\nimport secrets\nfrom datetime import datetime...
+    - tool_call / complete: run_bash
+      - Evidence: {"command": "pytest tests/auth/ -v"}
+    - tool_result / failed: run_bash
+      - Evidence: FAILED tests/auth/test_session.py::test_token_expiry - Assert...
+    - tool_call / complete: run_bash
+      - Evidence: {"command": "pytest tests/auth/ -v --tb=short"}
+    - tool_result / complete: run_bash
+      - Evidence: 8 passed in 0.43s
+
+    ## Missing Data Policy
+
+    Unknown fields were left unknown. This report is generated from local Hermes state and redacted before export.
+    ```
+  </Tab>
+  <Tab title="JSON">
+    The JSON report carries the full structured payload used internally by the dashboard — the complete journey detail object and the full crossings payload for the journey. It is intended for programmatic processing, storage in issue trackers, or further analysis outside the dashboard. Like the Markdown report, all preview fields are redacted before export.
+
+    **What the JSON report includes:**
+
+    | Key | Contents |
+    |---|---|
+    | `detail` | Full journey object including source, status, timing, model sequence, token counts, cost, guideposts, and child journey list |
+    | `crossings` | Full crossings payload including every crossing with type, label, status, actor, target, `inputs_preview`, `outputs_preview`, and `evidence_refs` |
+    | `generated_at` | Unix timestamp when the report was generated |
+
+    **Example JSON structure:**
+
+    ```json
+    {
+      "detail": {
+        "journey": {
+          "journey_id": "sess_01j9abc123",
+          "source": "cli",
+          "status": "complete",
+          "model_sequence": ["claude-3-5-sonnet-20241022"],
+          "started_at": 1714500000.0,
+          "ended_at": 1714501800.0,
+          "message_count": 12,
+          "tool_call_count": 7
+        },
+        "guideposts": [
+          {
+            "kind": "tooling",
+            "severity": "notice",
+            "title": "High tool-call journey",
+            "detail": "",
+            "evidence_refs": [{"kind": "session", "id": "sess_01j9abc123", "field": "tool_call_count"}]
+          }
+        ],
+        "child_journeys": [],
+        "crossing_count": 14,
+        "generated_at": 1714501900.0
+      },
+      "crossings": {
+        "journey_id": "sess_01j9abc123",
+        "crossings": [...],
+        "threads": [...],
+        "generated_at": 1714501900.0
+      },
+      "generated_at": 1714501900.0
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Accessing reports
+
+### From the dashboard
+
+Open any journey in the Labyrinth tab and navigate to the **Reports** view. Two export buttons — **Download .md** and **Download .json** — trigger the corresponding API endpoint and offer the result as a file download.
+
+### Via the API
+
+Both report formats are available directly as HTTP endpoints:
+
+```bash
+# Markdown report
+GET /api/plugins/hermes-labyrinth/reports/{journey_id}.md
+
+# JSON report
+GET /api/plugins/hermes-labyrinth/reports/{journey_id}.json
+```
+
+Replace `{journey_id}` with the session ID shown in the Journey Index. Journey IDs are also visible in the URL when a journey is open in the Labyrinth Map.
+
+**Example request:**
+
+```bash
+curl http://127.0.0.1:9119/api/plugins/hermes-labyrinth/reports/sess_01j9abc123.md
+```
+
+The Markdown endpoint returns `text/plain`. The JSON endpoint returns `application/json`.
+
+## Redaction
+
+All preview text in reports — `inputs_preview`, `outputs_preview`, and the journey summary — passes through the Hermes redaction layer before the report is generated. Patterns such as API keys, tokens, and high-entropy strings are replaced with masked placeholders.
+
+<Warning>
+  Redaction is best-effort and pattern-based. If a secret does not match a known pattern, it may appear in a preview. Do not treat Labyrinth reports as a secure audit log or share them in untrusted channels without reviewing the content first.
+</Warning>
+
+## Truncation
+
+Markdown reports include up to 200 crossings. If a journey has more than 200 crossings, the report ends with a truncation notice:
+
+```markdown
+- Report truncated after 200 crossings of 347.
+```
+
+The JSON report is not truncated — `crossings` contains the full payload for every crossing in the journey.
+
+## Missing data policy
+
+<Note>
+  Unknown fields are shown as `unknown` in reports, not fabricated or estimated. If a journey's model was not recorded, the model line reads `unknown`. If a field is absent from the Hermes session record, the report reflects that absence directly.
+</Note>
+
+This policy is stated explicitly at the end of every Markdown report in the **Missing Data Policy** section. It applies equally to the JSON report: fields that were not recorded in `state.db` appear as `null` or are omitted rather than filled with guesses.

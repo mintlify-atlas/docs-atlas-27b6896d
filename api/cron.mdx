@@ -1,0 +1,139 @@
+---
+title: "GET /cron — all scheduled Hermes cron jobs"
+description: "Returns all scheduled Hermes cron jobs with their state, schedule, last run result, and configuration including model, provider, and skills."
+keywords: ["cron", "scheduled jobs", "cron gate", "hermes labyrinth api"]
+---
+
+The cron endpoint returns all scheduled jobs known to the Hermes cron module, including both enabled and disabled jobs. When the cron module is not available (for example, because the cron package is not installed), the response still returns HTTP 200 with an `error` field describing the failure rather than raising a 500.
+
+## Endpoint
+
+```
+GET /api/plugins/hermes-labyrinth/cron
+```
+
+## Parameters
+
+This endpoint accepts no query parameters.
+
+## Response fields
+
+<ResponseField name="jobs" type="Job[]" required>
+  Array of normalized job objects. See [Job object](#job-object) below. Empty when the cron module is unavailable.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Number of jobs returned.
+</ResponseField>
+
+<ResponseField name="error" type="string">
+  Present only when the cron module could not be loaded. Describes the import or runtime error. The `jobs` array will be empty in this case.
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp when this response was assembled.
+</ResponseField>
+
+---
+
+## Job object
+
+<ResponseField name="id" type="string | null">
+  Unique job identifier.
+</ResponseField>
+
+<ResponseField name="name" type="string | null">
+  Human-readable job name.
+</ResponseField>
+
+<ResponseField name="enabled" type="boolean">
+  Whether this job is active. Defaults to `true` if not recorded.
+</ResponseField>
+
+<ResponseField name="state" type="string | null">
+  Current lifecycle state of the job (e.g. `"idle"`, `"running"`, `"error"`).
+</ResponseField>
+
+<ResponseField name="schedule_display" type="string | null">
+  Human-readable schedule description (e.g. `"Every day at 09:00"`).
+</ResponseField>
+
+<ResponseField name="next_run_at" type="float | null">
+  Unix timestamp of the next scheduled execution.
+</ResponseField>
+
+<ResponseField name="last_run_at" type="float | null">
+  Unix timestamp of the most recent execution.
+</ResponseField>
+
+<ResponseField name="last_status" type="string | null">
+  Outcome of the most recent run (e.g. `"success"`, `"failed"`).
+</ResponseField>
+
+<ResponseField name="last_error" type="string">
+  Redacted summary of the last error, if any. Truncated to 240 characters. Empty string when no error occurred.
+</ResponseField>
+
+<ResponseField name="deliver" type="string | null">
+  Delivery target for this job's output (e.g. a channel name or destination identifier).
+</ResponseField>
+
+<ResponseField name="workdir" type="string | null">
+  Working directory used when running this job.
+</ResponseField>
+
+<ResponseField name="model" type="string | null">
+  Model identifier configured for this job.
+</ResponseField>
+
+<ResponseField name="provider" type="string | null">
+  Provider name configured for this job.
+</ResponseField>
+
+<ResponseField name="skills" type="string[]">
+  List of skill names enabled for this job. Empty array if not configured.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl http://127.0.0.1:9119/api/plugins/hermes-labyrinth/cron
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "jobs": [
+    {
+      "id": "daily-standup",
+      "name": "Daily standup summary",
+      "enabled": true,
+      "state": "idle",
+      "schedule_display": "Every day at 09:00",
+      "next_run_at": 1718032800.0,
+      "last_run_at": 1717946400.0,
+      "last_status": "success",
+      "last_error": "",
+      "deliver": "slack-channel",
+      "workdir": "/home/user/project",
+      "model": "claude-3-5-haiku-20241022",
+      "provider": "anthropic",
+      "skills": ["git-workflow", "slack-notify"]
+    }
+  ],
+  "total": 1,
+  "generated_at": 1718000000.123
+}
+```
+
+```json Response (cron unavailable)
+{
+  "jobs": [],
+  "total": 0,
+  "error": "No module named 'cron.jobs'",
+  "generated_at": 1718000000.123
+}
+```

@@ -1,0 +1,101 @@
+---
+title: "Crossing Inspector: inspect any agent boundary event"
+description: "Inspect a selected crossing's type, timing, actor, target, redacted previews, evidence references, and the guideposts computed for its journey."
+keywords: ["crossing inspector", "crossing", "evidence", "redaction", "guideposts", "tool call", "subagent", "approval", "hermes labyrinth"]
+---
+
+The Crossing Inspector opens when you click any node on the Labyrinth Map. It presents every recorded field for the selected crossing — timing, actor, target, input and output previews, and links to the underlying messages, tool logs, or child sessions that serve as evidence. Sensitive content in previews is redacted before display.
+
+## Fields shown for a crossing
+
+The inspector header displays the crossing identity and status at a glance. The metadata grid below it breaks out the timing and thread context.
+
+| Field | Description |
+|---|---|
+| `type` | The crossing category. Determines the glyph shown and how the preview panels are labeled. |
+| `label` | A human-readable name for the crossing — typically the tool name, message role, or event description. |
+| `status` | `complete`, `failed`, `active`, or `interrupted`. Failed crossings are highlighted in red throughout the inspector. |
+| `started_at` | The timestamp when the crossing began, drawn from the underlying message timestamp. |
+| `ended_at` | The timestamp when the crossing completed. For single-message crossings this equals `started_at`. |
+| `duration_ms` | Elapsed time in milliseconds. Shown as `—` when timing data is not available. |
+| `actor` | The party that initiated the crossing — `user`, `agent`, a tool name, or a role string. |
+| `target` | The party or system that received the crossing — `agent_loop`, `user`, a tool name, or `session`. |
+| `inputs_preview` | Redacted preview of what was sent into this crossing. |
+| `outputs_preview` | Redacted preview of what came out of this crossing. |
+| `evidence_refs` | Links to the backing messages, sessions, logs, or approval records. |
+
+## Crossing types and their meaning
+
+<AccordionGroup>
+  <Accordion title="prompt">
+    A user message entering the agent loop. The `inputs_preview` shows the first portion of the prompt text. Actor is `user`; target is `agent_loop`.
+  </Accordion>
+
+  <Accordion title="tool_call">
+    The agent invoking a named tool with arguments. `label` is the tool name; `inputs_preview` shows the serialized arguments. Actor is `agent`; target is the tool name. A corresponding `tool_result` crossing follows once the tool returns.
+  </Accordion>
+
+  <Accordion title="tool_result">
+    The tool returning its output back to the agent. `outputs_preview` shows the first portion of the result. Actor is the tool name; target is `agent`. If the result content contains error text or a traceback, the crossing is marked `failed`.
+  </Accordion>
+
+  <Accordion title="assistant_response">
+    An assistant message with prose content and no tool call. `outputs_preview` shows the beginning of the response. Actor is `agent`; target is `user`. Status is derived from finish reason and content — `content_filter` or `length` finish reasons produce a `failed` status.
+  </Accordion>
+
+  <Accordion title="context_compression">
+    A synthetic crossing inserted when the session `end_reason` is `compression`. Indicates the context window was reset and a new session will continue the work. No input preview; `outputs_preview` reads "Session ended through context compression."
+  </Accordion>
+
+  <Accordion title="subagent_spawn">
+    The agent calling `delegate_task` to start a child session. `label` is `delegate_task`; `inputs_preview` shows the delegation arguments. Evidence refs include the child session ID when available.
+  </Accordion>
+
+  <Accordion title="subagent_return">
+    The child session completing and returning a result via the `delegate_task` tool result message. `outputs_preview` shows the delegated result. Evidence refs link to the child journey.
+  </Accordion>
+
+  <Accordion title="approval">
+    An approval boundary — the agent invoked a tool whose name includes `approval`, or a permission check occurred. The inspector shows timing and evidence refs that include the approval log file path when available.
+  </Accordion>
+</AccordionGroup>
+
+## Redaction
+
+All preview text passes through the Hermes redaction layer before the inspector renders it. The following patterns are replaced with masked placeholders:
+
+```text
+sk_live_<token>     →  sk_live_••••••••
+tg_<token>          →  tg_••••••••
+<16+ char uppercase> →  ••••••••
+```
+
+<Warning>
+  Redaction is applied at the backend before data leaves the plugin API, and again in the frontend before rendering. If a secret pattern is not recognized by the redaction rules, it may still appear in a preview. Do not treat Labyrinth previews as a secure audit log.
+</Warning>
+
+## Evidence references
+
+The evidence section lists the backing data sources for the selected crossing. Each reference identifies the kind and identifier of the source record.
+
+| Reference kind | What it points to |
+|---|---|
+| `message` | The underlying session message in `state.db`. Carries the message `id` field. |
+| `session` | A session record — the parent or the current session. Carries a `field` name identifying which session attribute is relevant. |
+| `crossing` | Another crossing in the same journey. Used by guideposts to point to specific boundary events. |
+| `tool` | A tool referenced by name. Carries a `name` field identifying the tool. Used in loop-detection guideposts. |
+
+## Guideposts for the crossing's journey
+
+When the selected crossing belongs to a journey with computed guideposts, the guidepost panel displays them alongside the inspector. Guideposts are derived from the full crossing list for the journey, not just the selected crossing.
+
+Examples of guideposts that reference specific crossings:
+
+- **Repeated failing tool** — the same tool returned a failed result more than once in this journey.
+- **Delegation boundary crossed** — at least one `subagent_spawn` crossing is present.
+- **Approval boundary crossed** — at least one `approval` crossing is present.
+- **Context compression occurred** — the session ended with `end_reason == "compression"`.
+
+<Tip>
+  If a guidepost references a crossing, clicking it jumps the map directly to that node so you can inspect the evidence without scrolling.
+</Tip>

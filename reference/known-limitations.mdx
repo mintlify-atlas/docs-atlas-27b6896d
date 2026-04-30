@@ -1,0 +1,55 @@
+---
+title: "Known limitations of Hermes Labyrinth v0.1.0"
+description: "Current limitations of Hermes Labyrinth v0.1.0 covering the demo, the installable plugin, and the repository source and test infrastructure."
+keywords: ["known limitations", "hermes labyrinth", "v0.1.0", "hackathon preview", "plugin limitations", "demo"]
+---
+
+Hermes Labyrinth `v0.1.0` is a hackathon preview. The demo is polished and the plugin is stable enough to install as a read-only dashboard extension, but several areas of the frontend source, test infrastructure, and runtime behavior are still incomplete. This page documents current limitations so you know what to expect.
+
+<Note>
+  `v0.1.0` is a hackathon preview release. The main UI flows and public demo are covered by browser smoke tests, but full Hermes dashboard integration tests are not yet in place.
+</Note>
+
+## Demo limitations
+
+The GitHub Pages demo at the public URL is a static harness with mocked Hermes state. It has the following constraints:
+
+- It does not connect to a live Hermes install and does not read real local state.
+- It uses pre-generated sample data and cache-busted local assets so it can run without any Hermes dependency.
+- It does not create, stop, resume, or mutate journeys — all interactions are read-only against the mocked dataset.
+- It should not be treated as live telemetry from any agent session.
+
+## Plugin limitations
+
+When installed as a live Hermes dashboard plugin against real local state:
+
+<AccordionGroup>
+  <Accordion title="Crossings are inferred from session messages">
+    Crossings are constructed by the plugin backend from existing Hermes session messages. The plugin does not receive live events from the agent loop. Some crossing fields — including durations, model switches, tool timings, and subagent links — depend on what Hermes has already recorded in `state.db`. If Hermes did not record a value, the crossing field shows `unknown`.
+  </Accordion>
+  <Accordion title="Fresh installs show sparse data">
+    On a fresh Hermes install, the Journey Index may show sparse or empty data until sessions, skills, or cron jobs exist in local state. Run a few Hermes sessions and reload the Labyrinth tab to populate the views.
+  </Accordion>
+  <Accordion title="Frontend loads crossings for all journeys eagerly">
+    The frontend currently fetches crossings for all listed journeys on load rather than lazily per selected journey. On larger local Hermes histories with many sessions, this can result in a large initial payload. Lazy per-journey loading is on the roadmap for a future release.
+  </Accordion>
+</AccordionGroup>
+
+## Repository limitations
+
+<AccordionGroup>
+  <Accordion title="dashboard/dist is checked in">
+    The `dashboard/dist/` bundle is committed to the repository as the installable artifact. This is intentional — it means no build step is required to install the plugin — but it also means the built output and the source in `src/` can diverge if source changes are not rebuilt and checked in. Run `npm run build` and commit the updated `dist/` if you modify the frontend source.
+  </Accordion>
+  <Accordion title="src/parts are not yet ES modules">
+    `src/parts/*.js` are ordered browser-targeted chunks concatenated during the build. They are not true ES modules with explicit imports and exports. This makes the source harder to navigate and test in isolation. Converting them into focused component, data, normalization, and plugin-registration modules is planned for the next development cycle.
+  </Accordion>
+  <Accordion title="Integration tests are not in place">
+    Browser smoke tests cover the demo's main controls and routes. API fixture tests cover normalization logic in the plugin backend. Full Hermes dashboard integration tests — testing plugin mounting, tab registration, and real local-state queries against a running Hermes dashboard — are not yet implemented.
+  </Accordion>
+  <Accordion title="Standalone HTML is not maintainable source">
+    `Hermes Labyrinth _standalone_.html` is kept as a design and demo artifact from the hackathon phase. It should not be treated as maintainable source or modified directly.
+  </Accordion>
+</AccordionGroup>
+
+See the [Roadmap](/reference/roadmap) for what is planned to address these limitations.

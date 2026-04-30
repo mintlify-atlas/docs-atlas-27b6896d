@@ -1,0 +1,85 @@
+---
+title: "GET /health — plugin liveness and data sources"
+description: "Returns plugin liveness, version, Hermes home path, state database presence, and the availability of each local data source: sessions, skills, and cron."
+keywords: ["health check", "plugin status", "data sources", "hermes labyrinth api"]
+---
+
+The health endpoint confirms that the Hermes Labyrinth plugin is running and reports which local data sources are available. It always returns HTTP 200 — use the `state_db_exists` and `data_sources` fields to determine whether session, skill, and cron data can be queried.
+
+## Endpoint
+
+```
+GET /api/plugins/hermes-labyrinth/health
+```
+
+## Parameters
+
+This endpoint accepts no query parameters.
+
+## Response fields
+
+<ResponseField name="ok" type="boolean" required>
+  Always `true` when the plugin is reachable.
+</ResponseField>
+
+<ResponseField name="plugin" type="string" required>
+  Plugin identifier. Always `"hermes-labyrinth"`.
+</ResponseField>
+
+<ResponseField name="version" type="string" required>
+  Plugin version string (e.g. `"0.1.0"`).
+</ResponseField>
+
+<ResponseField name="hermes_home" type="string" required>
+  Absolute path to the Hermes home directory resolved at runtime.
+</ResponseField>
+
+<ResponseField name="state_db_exists" type="boolean" required>
+  Whether `$HERMES_HOME/state.db` exists. If `false`, journey and crossing endpoints will return empty results or 404.
+</ResponseField>
+
+<ResponseField name="data_sources" type="object" required>
+  Availability of each local data source.
+
+  <Expandable title="properties">
+    <ResponseField name="sessions" type="boolean">
+      `true` when `state.db` exists and session data can be read.
+    </ResponseField>
+    <ResponseField name="skills" type="boolean">
+      `true` when at least one skill directory exists (user or bundled).
+    </ResponseField>
+    <ResponseField name="cron" type="boolean">
+      `true` when the cron config directory exists under Hermes home.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="generated_at" type="float" required>
+  Unix timestamp (seconds) when this response was assembled.
+</ResponseField>
+
+## Example
+
+<CodeGroup>
+
+```bash cURL
+curl http://127.0.0.1:9119/api/plugins/hermes-labyrinth/health
+```
+
+</CodeGroup>
+
+```json Response
+{
+  "ok": true,
+  "plugin": "hermes-labyrinth",
+  "version": "0.1.0",
+  "hermes_home": "/home/user/.hermes",
+  "state_db_exists": true,
+  "data_sources": {
+    "sessions": true,
+    "skills": true,
+    "cron": false
+  },
+  "generated_at": 1718000000.123
+}
+```
